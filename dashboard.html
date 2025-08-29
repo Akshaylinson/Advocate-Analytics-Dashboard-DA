@@ -1,0 +1,970 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Advocate Analytics Dashboard</title>
+
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              200: '#bfdbfe',
+              300: '#93c5fd',
+              400: '#60a5fa',
+              500: '#3b82f6',
+              600: '#2563eb',
+              700: '#1d4ed8',
+              800: '#1e40af',
+              900: '#1e3a8a',
+            },
+            dark: {
+              bg: "#0f172a",
+              card: "#1e293b",
+              card2: "#334155",
+              text: "#f1f5f9",
+              muted: "#94a3b8",
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Plotly -->
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .glass{
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+    }
+    
+    .dark .glass {
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .metric-card {
+      transition: all 0.3s ease;
+    }
+    
+    .metric-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+    }
+    
+    .chart-container {
+      position: relative;
+      min-height: 300px;
+    }
+    
+    .data-table {
+      border-spacing: 0;
+      width: 100%;
+    }
+    
+    .data-table th {
+      background: rgba(0, 0, 0, 0.03);
+      padding: 12px 15px;
+      text-align: left;
+      font-weight: 600;
+      border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .dark .data-table th {
+      background: rgba(255, 255, 255, 0.03);
+      border-bottom: 2px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .data-table td {
+      padding: 12px 15px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+    }
+    
+    .dark .data-table td {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+    
+    .data-table tr:hover {
+      background: rgba(0, 0, 0, 0.02);
+    }
+    
+    .dark .data-table tr:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      transition: all 0.2s ease;
+      gap: 6px;
+    }
+    
+    .btn-primary {
+      background: #3b82f6;
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+    
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid #e5e7eb;
+      color: #4b5563;
+    }
+    
+    .dark .btn-secondary {
+      border: 1px solid #4b5563;
+      color: #d1d5db;
+    }
+    
+    .btn-secondary:hover {
+      background: #f9fafb;
+    }
+    
+    .dark .btn-secondary:hover {
+      background: #374151;
+    }
+    
+    .form-input {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+      background: white;
+      width: 100%;
+    }
+    
+    .dark .form-input {
+      border: 1px solid #4b5563;
+      background: #1f2937;
+      color: #f3f4f6;
+    }
+    
+    .tab-button {
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .tab-button.active {
+      background: #3b82f6;
+      color: white;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-dark-bg dark:text-dark-text">
+  <header class="sticky top-0 z-30 bg-white/80 dark:bg-dark-bg/80 backdrop-blur border-b border-gray-200 dark:border-gray-800">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="h-10 w-10 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-extrabold">
+          <i class="fa-solid fa-scale-balanced"></i>
+        </div>
+        <div>
+          <span class="text-lg md:text-xl font-semibold tracking-tight">Advocate Analytics Dashboard</span>
+          <p class="text-xs text-gray-500 dark:text-gray-400">Comprehensive analysis of legal professionals dataset</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <a href="/download/csv" class="btn btn-primary">
+          <i class="fa-solid fa-download"></i>
+          Export Data
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Summary Section -->
+    <section class="mb-8">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-2xl font-bold">Dataset Overview</h2>
+        <span class="text-sm text-gray-500 dark:text-gray-400" id="lastUpdated">Last updated: Just now</span>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="glass metric-card p-5 rounded-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Total Records</p>
+              <p class="text-2xl font-bold mt-1" id="kpi-total">—</p>
+            </div>
+            <div class="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
+              <i class="fa-solid fa-database text-blue-600 dark:text-blue-400"></i>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            Advocates & law firms in database
+          </div>
+        </div>
+        
+        <div class="glass metric-card p-5 rounded-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Geographic Coverage</p>
+              <p class="text-2xl font-bold mt-1" id="kpi-coverage">—</p>
+            </div>
+            <div class="h-12 w-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+              <i class="fa-solid fa-map text-green-600 dark:text-green-400"></i>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <span id="kpi-states">—</span> states, <span id="kpi-cities">—</span> cities
+          </div>
+        </div>
+        
+        <div class="glass metric-card p-5 rounded-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Contact Completeness</p>
+              <p class="text-2xl font-bold mt-1" id="kpi-phones">—</p>
+            </div>
+            <div class="h-12 w-12 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+              <i class="fa-solid fa-phone text-amber-600 dark:text-amber-400"></i>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <span id="kpi-phones-present">—</span> with phone numbers
+          </div>
+        </div>
+        
+        <div class="glass metric-card p-5 rounded-xl">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-sm text-gray-500 dark:text-gray-400">Data Quality</p>
+              <p class="text-2xl font-bold mt-1" id="kpi-quality">—</p>
+            </div>
+            <div class="h-12 w-12 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
+              <i class="fa-solid fa-star text-purple-600 dark:text-purple-400"></i>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-gray-500 dark:text-gray-400">
+            <span id="kpi-dupes">—</span> potential duplicates
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Filters and Controls -->
+    <section class="glass p-5 rounded-xl mb-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div class="flex-1">
+          <h3 class="font-semibold mb-2">Data Filters</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <div>
+              <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Search</label>
+              <input id="searchInput" type="text" placeholder="Name, city, state, phone..." class="form-input">
+            </div>
+            <div>
+              <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">State</label>
+              <select id="stateFilter" class="form-input">
+                <option value="">All States</option>
+                <!-- Will be populated dynamically -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">City</label>
+              <select id="cityFilter" class="form-input">
+                <option value="">All Cities</option>
+                <!-- Will be populated dynamically -->
+              </select>
+            </div>
+            <div>
+              <label class="block text-sm text-gray-500 dark:text-gray-400 mb-1">Records per page</label>
+              <select id="pageSize" class="form-input">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button id="applyFilters" class="btn btn-primary">
+            <i class="fa-solid fa-filter"></i>
+            Apply Filters
+          </button>
+          <button id="clearFilters" class="btn btn-secondary">
+            <i class="fa-solid fa-rotate-left"></i>
+            Clear
+          </button>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Tabs for different views -->
+    <div class="flex gap-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-lg w-max">
+      <button class="tab-button active" data-tab="visualizations">
+        <i class="fa-solid fa-chart-simple"></i>
+        Visualizations
+      </button>
+      <button class="tab-button" data-tab="data-table">
+        <i class="fa-solid fa-table"></i>
+        Data Table
+      </button>
+      <button class="tab-button" data-tab="insights">
+        <i class="fa-solid fa-lightbulb"></i>
+        Insights
+      </button>
+    </div>
+    
+    <!-- Visualizations Tab -->
+    <div id="visualizations-tab" class="tab-content">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Geographic Distribution -->
+        <div class="glass p-5 rounded-xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Geographic Distribution</h3>
+            <div class="flex gap-1 text-xs">
+              <button class="tab-button active" data-chart="states-bar">States</button>
+              <button class="tab-button" data-chart="cities-bar">Cities</button>
+            </div>
+          </div>
+          <div class="chart-container">
+            <div id="chart-geo" style="height: 300px;"></div>
+          </div>
+        </div>
+        
+        <!-- Contact Completeness -->
+        <div class="glass p-5 rounded-xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Contact Information Completeness</h3>
+          </div>
+          <div class="chart-container">
+            <div id="chart-contacts" style="height: 300px;"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- State-City Heatmap -->
+        <div class="glass p-5 rounded-xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">State-City Concentration</h3>
+          </div>
+          <div class="chart-container">
+            <div id="chart-heatmap" style="height: 300px;"></div>
+          </div>
+        </div>
+        
+        <!-- Data Quality Metrics -->
+        <div class="glass p-5 rounded-xl">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="font-semibold">Data Quality Analysis</h3>
+          </div>
+          <div class="chart-container">
+            <div id="chart-quality" style="height: 300px;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Data Table Tab -->
+    <div id="data-table-tab" class="tab-content hidden">
+      <div class="glass p-5 rounded-xl">
+        <div class="flex items-center justify-between mb-4">
+          <h3 class="font-semibold">Advocate Records</h3>
+          <div class="flex items-center gap-3">
+            <span class="text-sm text-gray-500 dark:text-gray-400" id="table-info">Showing 0 of 0 records</span>
+            <div class="flex gap-1">
+              <button id="prevPage" class="btn btn-secondary py-1 px-3">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <button id="nextPage" class="btn btn-secondary py-1 px-3">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="overflow-auto rounded-lg">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Business Name</th>
+                <th>Owner</th>
+                <th>City</th>
+                <th>State</th>
+                <th>Contact</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="tableBody">
+              <!-- Will be populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Insights Tab -->
+    <div id="insights-tab" class="tab-content hidden">
+      <div class="glass p-5 rounded-xl">
+        <h3 class="font-semibold mb-4">Key Insights</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <h4 class="font-medium mb-2 text-blue-600 dark:text-blue-400">
+              <i class="fa-solid fa-map-location-dot mr-2"></i>
+              Geographic Distribution
+            </h4>
+            <ul class="text-sm space-y-2">
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-blue-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>The majority of advocates are concentrated in <span id="insight-top-state" class="font-medium">—</span> state</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-blue-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span><span id="insight-top-city" class="font-medium">—</span> has the highest number of legal professionals</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-blue-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span><span id="insight-state-coverage" class="font-medium">—</span> states have fewer than 10 advocates</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="font-medium mb-2 text-green-600 dark:text-green-400">
+              <i class="fa-solid fa-address-card mr-2"></i>
+              Contact Information
+            </h4>
+            <ul class="text-sm space-y-2">
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-green-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Approximately <span id="insight-phone-coverage" class="font-medium">—</span> of records have phone numbers</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-green-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span><span id="insight-best-state" class="font-medium">—</span> has the highest contact information completeness</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-green-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Potential data enrichment opportunity: <span id="insight-missing-contacts" class="font-medium">—</span> records</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="font-medium mb-2 text-amber-600 dark:text-amber-400">
+              <i class="fa-solid fa-database mr-2"></i>
+              Data Quality
+            </h4>
+            <ul class="text-sm space-y-2">
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-amber-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Approximately <span id="insight-duplicate-rate" class="font-medium">—</span> of records may be duplicates</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-amber-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Data cleaning could reduce the dataset by <span id="insight-duplicate-count" class="font-medium">—</span> records</span>
+              </li>
+            </ul>
+          </div>
+          
+          <div>
+            <h4 class="font-medium mb-2 text-purple-600 dark:text-purple-400">
+              <i class="fa-solid fa-chart-line mr-2"></i>
+              Recommendations
+            </h4>
+            <ul class="text-sm space-y-2">
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-purple-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Focus outreach efforts on high-density regions</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-purple-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Prioritize contact information enrichment for incomplete records</span>
+              </li>
+              <li class="flex items-start">
+                <span class="h-2 w-2 rounded-full bg-purple-500 mt-2 mr-2 flex-shrink-0"></span>
+                <span>Implement data deduplication process before analysis</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-sm text-gray-500 dark:text-gray-400 py-6 mt-8 border-t border-gray-200 dark:border-gray-800">
+    <p>© <span id="year"></span> Advocate Analytics Dashboard • v1.0</p>
+    <p class="text-xs mt-1">Data last updated: <span id="dataUpdateDate">—</span></p>
+  </footer>
+
+  <script>
+    // Current year for footer
+    document.getElementById('year').innerText = new Date().getFullYear();
+    
+    // Theme toggle functionality
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = themeToggle.querySelector('i');
+    
+    if (localStorage.getItem('theme') === 'dark' || 
+        (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+      themeIcon.classList.remove('fa-moon');
+      themeIcon.classList.add('fa-sun');
+    } else {
+      document.documentElement.classList.remove('dark');
+      themeIcon.classList.remove('fa-sun');
+      themeIcon.classList.add('fa-moon');
+    }
+    
+    themeToggle.addEventListener('click', () => {
+      if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+        themeIcon.classList.remove('fa-sun');
+        themeIcon.classList.add('fa-moon');
+      } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+        themeIcon.classList.remove('fa-moon');
+        themeIcon.classList.add('fa-sun');
+      }
+    });
+    
+    // Tab switching functionality
+    const tabButtons = document.querySelectorAll('[data-tab]');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const tabId = button.getAttribute('data-tab');
+        
+        // Update active tab button
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        // Show selected tab content
+        tabContents.forEach(content => content.classList.add('hidden'));
+        document.getElementById(`${tabId}-tab`).classList.remove('hidden');
+      });
+    });
+    
+    // Chart switching functionality
+    const chartButtons = document.querySelectorAll('[data-chart]');
+    
+    chartButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const chartType = button.getAttribute('data-chart');
+        
+        // Update active chart button
+        chartButtons.forEach(btn => btn.classList.remove('active'));
+        button.classList.add('active');
+        
+        // Load the selected chart
+        loadChart(chartType);
+      });
+    });
+    
+    // Formatting helpers
+    const fmt = (n) => (n ?? 0).toLocaleString();
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    
+    // Load summary data
+    async function loadSummary() {
+      try {
+        const response = await fetch('/api/summary');
+        const s = await response.json();
+        
+        // Update KPIs
+        document.getElementById('kpi-total').innerText = fmt(s.total_records);
+        document.getElementById('kpi-coverage').innerText = `${fmt(s.unique_states)} / ${fmt(s.unique_cities)}`;
+        document.getElementById('kpi-states').innerText = fmt(s.unique_states);
+        document.getElementById('kpi-cities').innerText = fmt(s.unique_cities);
+        document.getElementById('kpi-phones').innerText = `${Math.round(100 * s.phones_present / s.total_records)}%`;
+        document.getElementById('kpi-phones-present').innerText = fmt(s.phones_present);
+        document.getElementById('kpi-quality').innerText = `${Math.round(100 * s.potential_duplicates / s.total_records)}%`;
+        document.getElementById('kpi-dupes').innerText = fmt(s.potential_duplicates);
+        
+        // Update last updated timestamp
+        document.getElementById('lastUpdated').innerText = `Last updated: ${new Date().toLocaleTimeString()}`;
+        document.getElementById('dataUpdateDate').innerText = new Date().toLocaleDateString();
+        
+        // Load initial charts
+        loadChart('states-bar');
+        loadContactChart();
+        loadHeatmap();
+        loadQualityChart();
+        
+        // Load insights
+        loadInsights();
+        
+      } catch (error) {
+        console.error('Error loading summary:', error);
+      }
+    }
+    
+    // Load geographic chart
+    async function loadChart(type) {
+      try {
+        let url, layout, config;
+        
+        if (type === 'states-bar') {
+          url = '/api/top-states?limit=12';
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          const chartData = [{
+            x: data.map(item => item.State),
+            y: data.map(item => item.count),
+            type: 'bar',
+            marker: {
+              color: '#3b82f6'
+            }
+          }];
+          
+          layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: {t: 30, b: 100, l: 50, r: 30},
+            xaxis: {
+              tickangle: -45
+            },
+            yaxis: {
+              title: 'Number of Advocates'
+            }
+          };
+          
+          config = {responsive: true, displayModeBar: false};
+          
+          Plotly.newPlot('chart-geo', chartData, layout, config);
+          
+        } else if (type === 'cities-bar') {
+          url = '/api/top-cities?limit=15';
+          const response = await fetch(url);
+          const data = await response.json();
+          
+          const chartData = [{
+            y: data.map(item => `${item.City}, ${item.State}`),
+            x: data.map(item => item.count),
+            type: 'bar',
+            orientation: 'h',
+            marker: {
+              color: '#10b981'
+            }
+          }];
+          
+          layout = {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: {t: 30, b: 50, l: 150, r: 30},
+            yaxis: {
+              automargin: true
+            },
+            xaxis: {
+              title: 'Number of Advocates'
+            }
+          };
+          
+          config = {responsive: true, displayModeBar: false};
+          
+          Plotly.newPlot('chart-geo', chartData, layout, config);
+        }
+      } catch (error) {
+        console.error('Error loading chart:', error);
+      }
+    }
+    
+    // Load contact completeness chart
+    async function loadContactChart() {
+      try {
+        const response = await fetch('/api/phones-by-state?limit=10');
+        const data = await response.json();
+        
+        const chartData = [{
+          x: data.map(item => item.State),
+          y: data.map(item => Math.round(item.rate * 100)),
+          type: 'bar',
+          marker: {
+            color: data.map(item => `rgba(59, 130, 246, ${0.3 + 0.7 * item.rate})`)
+          }
+        }];
+        
+        const layout = {
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          margin: {t: 30, b: 100, l: 50, r: 30},
+          xaxis: {
+            tickangle: -45
+          },
+          yaxis: {
+            title: 'Percentage with Phone Numbers',
+            range: [0, 100],
+            ticksuffix: '%'
+          }
+        };
+        
+        const config = {responsive: true, displayModeBar: false};
+        
+        Plotly.newPlot('chart-contacts', chartData, layout, config);
+      } catch (error) {
+        console.error('Error loading contact chart:', error);
+      }
+    }
+    
+    // Load heatmap
+    async function loadHeatmap() {
+      try {
+        const response = await fetch('/api/state-city-heatmap?states=8&cities=10');
+        const data = await response.json();
+        
+        const chartData = [{
+          z: data.z,
+          x: data.states,
+          y: data.cities,
+          type: 'heatmap',
+          colorscale: 'Blues',
+          showscale: true
+        }];
+        
+        const layout = {
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          margin: {t: 30, b: 100, l: 120, r: 30},
+          xaxis: {
+            tickangle: -45
+          }
+        };
+        
+        const config = {responsive: true, displayModeBar: false};
+        
+        Plotly.newPlot('chart-heatmap', chartData, layout, config);
+      } catch (error) {
+        console.error('Error loading heatmap:', error);
+      }
+    }
+    
+    // Load data quality chart
+    async function loadQualityChart() {
+      try {
+        const response = await fetch('/api/summary');
+        const s = await response.json();
+        
+        const uniqueCount = s.total_records - s.potential_duplicates;
+        
+        const chartData = [{
+          values: [uniqueCount, s.potential_duplicates],
+          labels: ['Unique Records', 'Potential Duplicates'],
+          type: 'pie',
+          hole: 0.5,
+          marker: {
+            colors: ['#10b981', '#f59e0b']
+          }
+        }];
+        
+        const layout = {
+          paper_bgcolor: 'rgba(0,0,0,0)',
+          plot_bgcolor: 'rgba(0,0,0,0)',
+          margin: {t: 30, b: 30, l: 30, r: 30},
+          showlegend: true,
+          legend: {
+            orientation: 'h',
+            y: -0.1
+          }
+        };
+        
+        const config = {responsive: true, displayModeBar: false};
+        
+        Plotly.newPlot('chart-quality', chartData, layout, config);
+      } catch (error) {
+        console.error('Error loading quality chart:', error);
+      }
+    }
+    
+    // Load insights
+    async function loadInsights() {
+      try {
+        // Get top states
+        const statesResponse = await fetch('/api/top-states?limit=20');
+        const statesData = await statesResponse.json();
+        
+        // Get top cities
+        const citiesResponse = await fetch('/api/top-cities?limit=20');
+        const citiesData = await citiesResponse.json();
+        
+        // Get summary
+        const summaryResponse = await fetch('/api/summary');
+        const summary = await summaryResponse.json();
+        
+        // Get phones by state
+        const phonesResponse = await fetch('/api/phones-by-state?limit=20');
+        const phonesData = await phonesResponse.json();
+        
+        // Update insights
+        document.getElementById('insight-top-state').textContent = statesData[0]?.State || 'N/A';
+        document.getElementById('insight-top-city').textContent = `${citiesData[0]?.City}, ${citiesData[0]?.State}` || 'N/A';
+        
+        // Count states with fewer than 10 advocates
+        const statesWithFewAdvocates = statesData.filter(state => state.count < 10).length;
+        document.getElementById('insight-state-coverage').textContent = statesWithFewAdvocates;
+        
+        // Phone coverage
+        const phoneCoverage = Math.round(100 * summary.phones_present / summary.total_records);
+        document.getElementById('insight-phone-coverage').textContent = `${phoneCoverage}%`;
+        
+        // State with best phone coverage (with at least 10 records)
+        const stateWithBestCoverage = phonesData
+          .filter(state => state.total >= 10)
+          .sort((a, b) => b.rate - a.rate)[0];
+        
+        document.getElementById('insight-best-state').textContent = 
+          stateWithBestCoverage?.State || 'N/A';
+        
+        // Missing contacts
+        document.getElementById('insight-missing-contacts').textContent = 
+          fmt(summary.phones_missing);
+        
+        // Duplicate rate
+        const duplicateRate = Math.round(100 * summary.potential_duplicates / summary.total_records);
+        document.getElementById('insight-duplicate-rate').textContent = `${duplicateRate}%`;
+        document.getElementById('insight-duplicate-count').textContent = fmt(summary.potential_duplicates);
+        
+      } catch (error) {
+        console.error('Error loading insights:', error);
+      }
+    }
+    
+    // Initialize the dashboard
+    document.addEventListener('DOMContentLoaded', () => {
+      loadSummary();
+      
+      // Set up filter event listeners
+      document.getElementById('applyFilters').addEventListener('click', applyFilters);
+      document.getElementById('clearFilters').addEventListener('click', clearFilters);
+      
+      // Set up pagination
+      document.getElementById('prevPage').addEventListener('click', prevPage);
+      document.getElementById('nextPage').addEventListener('click', nextPage);
+      
+      // Load initial table data
+      loadTableData();
+    });
+    
+    // Table functionality
+    let currentPage = 1;
+    let pageSize = 25;
+    let currentSearch = '';
+    let currentState = '';
+    let currentCity = '';
+    
+    async function loadTableData() {
+      try {
+        const start = (currentPage - 1) * pageSize;
+        let url = `/api/table?start=${start}&length=${pageSize}`;
+        
+        if (currentSearch) {
+          url += `&search[value]=${encodeURIComponent(currentSearch)}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        // Update table info
+        document.getElementById('table-info').textContent = 
+          `Showing ${start + 1} to ${Math.min(start + pageSize, data.recordsFiltered)} of ${fmt(data.recordsFiltered)} records`;
+        
+        // Populate table
+        const tableBody = document.getElementById('tableBody');
+        tableBody.innerHTML = '';
+        
+        data.data.forEach(row => {
+          const tr = document.createElement('tr');
+          
+          tr.innerHTML = `
+            <td>${escapeHtml(row['Business Name'] || 'N/A')}</td>
+            <td>${escapeHtml(row['Owner Name'] || 'N/A')}</td>
+            <td>${escapeHtml(row.City || 'N/A')}</td>
+            <td>${escapeHtml(row.State || 'N/A')}</td>
+            <td>${escapeHtml(row['Mobile Number'] || 'N/A')}</td>
+            <td>
+              <button class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200">
+                <i class="fa-solid fa-eye"></i>
+              </button>
+            </td>
+          `;
+          
+          tableBody.appendChild(tr);
+        });
+        
+      } catch (error) {
+        console.error('Error loading table data:', error);
+      }
+    }
+    
+    function applyFilters() {
+      currentSearch = document.getElementById('searchInput').value;
+      currentState = document.getElementById('stateFilter').value;
+      currentCity = document.getElementById('cityFilter').value;
+      pageSize = parseInt(document.getElementById('pageSize').value);
+      
+      currentPage = 1;
+      loadTableData();
+    }
+    
+    function clearFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('stateFilter').value = '';
+      document.getElementById('cityFilter').value = '';
+      document.getElementById('pageSize').value = '25';
+      
+      currentSearch = '';
+      currentState = '';
+      currentCity = '';
+      pageSize = 25;
+      currentPage = 1;
+      
+      loadTableData();
+    }
+    
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        loadTableData();
+      }
+    }
+    
+    function nextPage() {
+      // We don't know the total pages, so we just increment
+      // and let the API handle out-of-bounds requests
+      currentPage++;
+      loadTableData();
+    }
+  </script>
+</body>
+</html>
